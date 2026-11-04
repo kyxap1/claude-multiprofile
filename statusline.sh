@@ -52,6 +52,12 @@ if [ -n "$ACCOUNT" ]; then
     ACCOUNT_HASH=$(( (ACCOUNT_HASH * 33 + CH) % 2147483647 ))
   done
   ACCOUNT_IDX=$((ACCOUNT_HASH % ${#ACCOUNT_PALETTE[@]}))
+  # One digit in the profile's statusline-style file pins its colour+icon slot.
+  if [ -f "$CLAUDE_CONFIG_DIR/statusline-style" ]; then
+    ACCOUNT_PIN=""
+    read -r ACCOUNT_PIN < "$CLAUDE_CONFIG_DIR/statusline-style"
+    [[ "$ACCOUNT_PIN" =~ ^[0-9]$ ]] && ACCOUNT_IDX=$ACCOUNT_PIN
+  fi
   ACCOUNT_COLOR=${ACCOUNT_PALETTE[$ACCOUNT_IDX]}
   ACCOUNT_ICON=${ACCOUNT_ICONS[$ACCOUNT_IDX]}
 fi
@@ -71,17 +77,20 @@ fmt_tokens() {
 IN_FMT=$(fmt_tokens "$INPUT_T")
 OUT_FMT=$(fmt_tokens "$OUTPUT_T")
 
-# Countdown to a reset in its two largest units (1d07h, 4h05m, 12m), truncated,
-# so it never overstates the wait; the last minute shows as <1m.
+# Countdown to a reset in its two largest units (1d7h, 4h5m, 12m), unpadded and
+# without a zero second unit (1h, not 1h0m). Truncated, so it never overstates
+# the wait; the last minute shows as <1m.
 fmt_countdown() {
-  local remain=$1
+  local remain=$1 big=0 small=0 bu="" su=""
   [ "$remain" -lt 0 ] && remain=0
   local d=$((remain / 86400)) h=$(( (remain % 86400) / 3600 )) m=$(( (remain % 3600) / 60 ))
-  if [ "$d" -ge 1 ]; then printf '%dd%02dh' "$d" "$h"
-  elif [ "$h" -ge 1 ]; then printf '%dh%02dm' "$h" "$m"
-  elif [ "$m" -ge 1 ]; then printf '%dm' "$m"
-  else printf '<1m'
+  if [ "$d" -ge 1 ]; then big=$d bu=d small=$h su=h
+  elif [ "$h" -ge 1 ]; then big=$h bu=h small=$m su=m
+  elif [ "$m" -ge 1 ]; then big=$m bu=m
+  else printf '<1m'; return
   fi
+  printf '%d%s' "$big" "$bu"
+  if [ "$small" -gt 0 ]; then printf '%d%s' "$small" "$su"; fi
 }
 
 MINS=$((DURATION_MS / 60000)); SECS=$(((DURATION_MS % 60000) / 1000))

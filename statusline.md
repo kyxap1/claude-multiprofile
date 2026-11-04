@@ -17,7 +17,7 @@ Line 2:  <effort> ❯ $<cost> ❯ <duration> <context-bar> <context-%>  t:<input
 | Model | `model.display_name` | `Opus` |
 | Branch | `git branch --show-current` | `feat/statusline` |
 | Directory | `workspace.current_dir` (basename) | `claude-sandbox` |
-| 5h / 7d rate limits | `rate_limits.five_hour`, `.seven_day`: time to reset in its two largest units (truncated, `<1m` for the last minute), then `used_percentage` | `2h05m:23% 3d07h:41%` |
+| 5h / 7d rate limits | `rate_limits.five_hour`, `.seven_day`: time to reset in its two largest units (truncated, `<1m` for the last minute), then `used_percentage` | `2h5m:23% 3d7h:41%` |
 | Email | `claude auth status --json`, cached per profile and session | `you@example.com` |
 | Account | `CLAUDE_CONFIG_DIR` basename, hashed to a color + icon | ` private` |
 | Effort | `effort.level` | `high` |
@@ -95,6 +95,8 @@ ACCOUNT_IDX=$((ACCOUNT_HASH % ${#ACCOUNT_PALETTE[@]}))
 ```
 
 `ACCOUNT_PALETTE` holds 10 muted xterm-256 colors swept across a 0–270° hue range (the 270–360° band is skipped — it lands on magenta/hot-pink, which reads as out of place against the rest of the muted set). `ACCOUNT_ICONS` pairs each color with a distinct Font Awesome "person" glyph (astronaut, ninja, secret agent, robot, graduate, doctor, nurse, injured, digger, ring) at the same index, so a hash bucket always gets a matching color+icon pair. No `CLAUDE_CONFIG_DIR` set → the whole segment (and its separator) is skipped.
+
+Ten slots means two profiles can still land on the same pair. To pin a profile's slot, put one digit in `statusline-style` inside its config dir, e.g. `echo 9 > ~/.claude-work/statusline-style` for the ring. Slots by index: 0 astronaut, 1 ninja, 2 secret agent, 3 robot, 4 graduate, 5 doctor, 6 nurse, 7 injured, 8 digger, 9 ring, in the colours of `ACCOUNT_PALETTE` at the same index.
 
 ## Available data fields
 

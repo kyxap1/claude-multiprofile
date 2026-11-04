@@ -92,8 +92,8 @@ jq '.statusLine = {type: "command", command: "~/.claude/statusline.sh", refreshI
 
 step "reset countdown"
 eval "$(sed -n '/^fmt_countdown() {/,/^}/p' "$REPO/statusline.sh")"
-for c in -5:'<1m' 59:'<1m' 60:1m 3599:59m 3600:1h00m 7199:1h59m 17999:4h59m \
-         86399:23h59m 86400:1d00h 172799:1d23h 604799:6d23h; do
+for c in -5:'<1m' 59:'<1m' 60:1m 3599:59m 3600:1h 3900:1h5m 7199:1h59m 17999:4h59m \
+         86399:23h59m 86400:1d 108000:1d6h 172799:1d23h 604799:6d23h; do
   want_eq "$(fmt_countdown "${c%%:*}")" "${c#*:}" "countdown ${c%%:*}s"
 done
 
@@ -169,6 +169,12 @@ c_private="$(status private s2 | grep -o '38;5;[0-9]*m [^ ]*  private ' | grep -
 c_private2="$(status private2 s3 | grep -o '38;5;[0-9]*m [^ ]*  private2 ' | grep -o '38;5;[0-9]*')"
 [ -n "$c_private" ] && [ -n "$c_private2" ] || fail "could not read profile colours"
 [ "$c_private" != "$c_private2" ] || fail "private and private2 share colour $c_private"
+# Slot 9 is colour 74 with the ring icon; the pin file needs no trailing newline.
+printf 9 > "$HOME/.claude-private2/statusline-style"
+want_has "$(status private2 s3)" $'38;5;74m \xee\xbc\x8b  private2 ' "pinned slot"
+echo junk > "$HOME/.claude-private2/statusline-style"
+want_has "$(status private2 s3)" "$c_private2"'m ' "invalid pin falls back to the hash"
+rm "$HOME/.claude-private2/statusline-style"
 
 step "rollback"
 backups=("$HOME"/.claude-migration-backup-*)
