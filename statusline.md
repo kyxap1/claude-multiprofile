@@ -83,15 +83,15 @@ if [[ -n "$CLAUDE_CONFIG_DIR" ]]; then
 fi
 ```
 
-Its color and icon are picked deterministically from a char-sum hash of the name, so the same profile always renders the same way, and different profiles get visually distinct combos:
+Its color and icon are picked deterministically from a djb2 hash of the name (a plain char sum would put `private` and `private2` in one bucket), so the same profile always renders the same way, and different profiles get visually distinct combos:
 
 ```bash
-ACCOUNT_SUM=0
+ACCOUNT_HASH=5381
 for (( i=0; i<${#ACCOUNT}; i++ )); do
   printf -v CH '%d' "'${ACCOUNT:i:1}"
-  ACCOUNT_SUM=$((ACCOUNT_SUM + CH))
+  ACCOUNT_HASH=$(( (ACCOUNT_HASH * 33 + CH) % 2147483647 ))
 done
-ACCOUNT_IDX=$((ACCOUNT_SUM % ${#ACCOUNT_PALETTE[@]}))
+ACCOUNT_IDX=$((ACCOUNT_HASH % ${#ACCOUNT_PALETTE[@]}))
 ```
 
 `ACCOUNT_PALETTE` holds 10 muted xterm-256 colors swept across a 0–270° hue range (the 270–360° band is skipped — it lands on magenta/hot-pink, which reads as out of place against the rest of the muted set). `ACCOUNT_ICONS` pairs each color with a distinct Font Awesome "person" glyph (astronaut, ninja, secret agent, robot, graduate, doctor, nurse, injured, digger, ring) at the same index, so a hash bucket always gets a matching color+icon pair. No `CLAUDE_CONFIG_DIR` set → the whole segment (and its separator) is skipped.

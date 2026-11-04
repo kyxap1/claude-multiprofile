@@ -7,7 +7,8 @@ Several Claude Code accounts (say, work and personal) on one machine, sharing on
 ```
 claude            default profile
 claude-work       work account
-claude-personal   personal account
+claude-private    private account
+claude-private2   second private account
 ```
 
 ## How it works

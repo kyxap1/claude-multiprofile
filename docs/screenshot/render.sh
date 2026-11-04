@@ -9,6 +9,7 @@ cat > "$HOME/bin/claude" <<'EOF'
 #!/bin/sh
 case "$CLAUDE_CONFIG_DIR" in
   *work) echo '{"email":"alex.doe@acme.example"}' ;;
+  *private2) echo '{"email":"alex.side@example.com"}' ;;
   *) echo '{"email":"alex.doe@example.com"}' ;;
 esac
 EOF
@@ -38,10 +39,18 @@ work=$(render work billing-api feat/PAY-2041-retry-failed-webhooks '{
 
 private=$(render private dotfiles main '{
   "model":{"display_name":"Opus 5.5"},"workspace":{"current_dir":"/src/dotfiles"},"session_id":"b2",
-  "cost":{"total_cost_usd":2.75,"total_duration_ms":1084000},"effort":{"level":"medium"},
+  "cost":{"total_cost_usd":2.75,"total_duration_ms":1084000},"effort":{"level":"high"},
   "context_window":{"used_percentage":34,"total_input_tokens":68000,"total_output_tokens":246},
   "rate_limits":{"five_hour":{"used_percentage":96,"resets_at":'$((now + 1800))'},
                  "seven_day":{"used_percentage":83,"resets_at":'$((now + 1*86400 + 3600))'}}}')
+
+# Fresh session on a second private account: everything at its starting point.
+private2=$(render private2 side-project main '{
+  "model":{"display_name":"Sonnet 5.5"},"workspace":{"current_dir":"/src/side-project"},"session_id":"c3",
+  "cost":{"total_cost_usd":0.03,"total_duration_ms":14000},"effort":{"level":"low"},
+  "context_window":{"used_percentage":1,"total_input_tokens":2000,"total_output_tokens":12},
+  "rate_limits":{"five_hour":{"used_percentage":1,"resets_at":'$((now + 4*3600 + 3540))'},
+                 "seven_day":{"used_percentage":1,"resets_at":'$((now + 6*86400 + 23*3600))'}}}')
 
 pane() {
   cat <<EOF
@@ -60,7 +69,7 @@ cat > /tmp/statusline.html <<EOF
 <!doctype html><meta charset="utf-8">
 <style>
   html,body { height:auto; } body { margin:0; background:#121212; font-family:'JetBrainsMono Nerd Font','Noto Sans Symbols 2','DejaVu Sans Mono',monospace; font-size:15px; color:#bcbcbc; }
-  .pane { background:#1c1c1c; margin:16px; padding:10px 14px 14px; border-radius:8px; width:1070px; }
+  .pane { background:#1c1c1c; margin:16px; padding:10px 14px 14px; border-radius:8px; width:1110px; }
   .cmd { color:#8a8a8a; margin-bottom:8px; }
   .rule { border-top:1px solid #4e4e4e; margin:6px 0; }
   .line { padding:4px 0; }
@@ -71,9 +80,10 @@ cat > /tmp/statusline.html <<EOF
 </style>
 $(pane work "$work")
 $(pane private "$private")
+$(pane private2 "$private2")
 EOF
 
 timeout 60 chromium --headless --no-sandbox --disable-gpu --hide-scrollbars \
-  --force-device-scale-factor=2 --virtual-time-budget=1000 --window-size=1130,500 \
+  --force-device-scale-factor=2 --virtual-time-budget=1000 --window-size=1170,700 \
   --screenshot=/out/statusline.png file:///tmp/statusline.html 2>/dev/null
 echo rendered

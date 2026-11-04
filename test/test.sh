@@ -99,33 +99,33 @@ done
 
 step "migrate --dry-run changes nothing"
 before="$(find "$HOME" | sort)"
-"$P" migrate --dry-run work personal
+"$P" migrate --dry-run work private
 want_eq "$(find "$HOME" | sort)" "$before" "dry run touched files"
 
-step "migrate work personal"
-echo y | "$P" migrate work personal
+step "migrate work private"
+echo y | "$P" migrate work private
 for f in history.jsonl .credentials.json projects/p1 .claude.json; do
   [ -e "$HOME/.claude-work/$f" ] || fail "$f not moved to work"
 done
 [ ! -e "$HOME/.claude/history.jsonl" ] || fail "history left in shared dir"
 [ ! -e "$HOME/.claude.json" ] || fail "global config left in HOME"
 [ -f "$HOME/.claude/CLAUDE.md" ] || fail "CLAUDE.md left shared dir"
-for p in work personal; do
+for p in work private; do
   want_eq "$(readlink "$HOME/.claude-$p/settings.json")" "$HOME/.claude/settings.json" "$p settings link"
   want_eq "$(readlink "$HOME/.claude-$p/skills")" "$HOME/.claude/skills" "$p skills link"
 done
-[ ! -e "$HOME/.claude-personal/history.jsonl" ] || fail "personal not empty"
+[ ! -e "$HOME/.claude-private/history.jsonl" ] || fail "private not empty"
 want_eq "$(readlink "$HOME/.claude-default")" ".claude-work" "default link"
 
 step "dispatch"
 want_eq "$(claude-work)" "dir=$HOME/.claude-work model=" "claude-work"
 want_eq "$(claude)" "dir=$HOME/.claude-work model=" "bare claude follows default, resolved"
-want_eq "$(CLAUDE_CONFIG_DIR="$HOME/.claude-personal" claude)" "dir=$HOME/.claude-personal model=" "CLAUDE_CONFIG_DIR wins"
+want_eq "$(CLAUDE_CONFIG_DIR="$HOME/.claude-private" claude)" "dir=$HOME/.claude-private model=" "CLAUDE_CONFIG_DIR wins"
 
 step "add with model"
-"$P" add extra opus
-want_eq "$(claude-extra)" "dir=$HOME/.claude-extra model=opus" "per-profile model"
-want_eq "$(ANTHROPIC_MODEL=sonnet claude-extra)" "dir=$HOME/.claude-extra model=sonnet" "env model wins"
+"$P" add private2 sonnet
+want_eq "$(claude-private2)" "dir=$HOME/.claude-private2 model=sonnet" "per-profile model"
+want_eq "$(ANTHROPIC_MODEL=opus claude-private2)" "dir=$HOME/.claude-private2 model=opus" "env model wins"
 
 step "refusals"
 ! "$P" add Bad 2>/dev/null || fail "accepted uppercase name"
@@ -136,7 +136,7 @@ step "refusals"
 step "check"
 out="$("$P" check)" || fail "check failed: $out"
 want_has "$out" "ok    PATH" "check PATH"
-want_has "$out" "profile extra -> $HOME/.claude-extra (model opus)" "check lists profile"
+want_has "$out" "profile private2 -> $HOME/.claude-private2 (model sonnet)" "check lists profile"
 
 step "login isolation and statusline"
 status() {
@@ -153,23 +153,36 @@ out="$(status work s1)"
 for s in Opus repo work work@example.com '$1.50' 't:15k/1.2M' '42%' ':80%'; do
   want_has "$out" "$s" "statusline segment"
 done
-want_not "$(status personal s1)" "@example.com" "logged-out profile shows another profile's email"
-fake_login "$HOME/.claude-personal" personal@example.com
-out="$(status personal s2)"
-want_has "$out" "personal@example.com" "personal email after login"
-want_not "$out" "work@example.com" "work email leaked into personal"
-want_has "$(status work s1)" "work@example.com" "work cache survives personal session"
+want_not "$(status private s1)" "@example.com" "logged-out profile shows another profile's email"
+fake_login "$HOME/.claude-private" private@example.com
+out="$(status private s2)"
+want_has "$out" "private@example.com" "private email after login"
+want_not "$out" "work@example.com" "work email leaked into private"
+want_has "$(status work s1)" "work@example.com" "work cache survives private session"
+fake_login "$HOME/.claude-private2" side@example.com
+out="$(status private2 s3)"
+want_has "$out" "side@example.com" "second private account shows its own email"
+want_not "$out" "private@example.com" "private email leaked into private2"
+
+step "profile colours"
+c_private="$(status private s2 | grep -o '38;5;[0-9]*m [^ ]*  private ' | grep -o '38;5;[0-9]*')"
+c_private2="$(status private2 s3 | grep -o '38;5;[0-9]*m [^ ]*  private2 ' | grep -o '38;5;[0-9]*')"
+[ -n "$c_private" ] && [ -n "$c_private2" ] || fail "could not read profile colours"
+[ "$c_private" != "$c_private2" ] || fail "private and private2 share colour $c_private"
 
 step "rollback"
 backups=("$HOME"/.claude-migration-backup-*)
 "${backups[0]}/ROLLBACK.sh"
 [ -f "$HOME/.claude/history.jsonl" ] || fail "history not restored"
 [ -f "$HOME/.claude.json" ] || fail "global config not restored"
-for p in work personal; do
+for p in work private; do
   [ ! -e "$HOME/.claude-$p" ] || fail ".claude-$p left behind"
   [ ! -e "$HOME/bin/claude-$p" ] || fail "claude-$p left behind"
 done
 [ ! -e "$HOME/.claude-default" ] || fail "default link left behind"
-want_eq "$(cat "$KEYCHAIN")" "$ME|Claude Code-credentials" "Keychain after rollback keeps only the pre-migration item"
+# Profiles added after migrate are not part of the rollback and keep their login.
+[ -d "$HOME/.claude-private2" ] || fail "rollback removed a profile added later"
+want_eq "$(cat "$KEYCHAIN")" "$ME|Claude Code-credentials
+$ME|$(service_for "$HOME/.claude-private2")" "Keychain after rollback: pre-migration item plus the later profile"
 
 printf '\nall passed (bash %s)\n' "$BASH_VERSION"

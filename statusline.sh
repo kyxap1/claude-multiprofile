@@ -45,12 +45,13 @@ if [ -n "$ACCOUNT" ]; then
   ACCOUNT_PALETTE=(167 149 80 134 185 79 62 179 77 74)
   # fa-user_astronaut, _ninja, _secret, fa-robot, _graduate, _doctor, _nurse, _injured, fa-person_digging, fa-ring
   ACCOUNT_ICONS=($'\xee\xb7\x85' $'\xee\xb7\x8e' $'\xef\x88\x9b' $'\xee\xb8\x8d' $'\xee\xb7\x8b' $'\xef\x83\xb0' $'\xee\xbe\x92' $'\xee\xbc\x93' $'\xee\xbe\xa6' $'\xee\xbc\x8b')
-  ACCOUNT_SUM=0
+  # djb2: a plain char sum maps private and private2 to one bucket ('2' is 50).
+  ACCOUNT_HASH=5381
   for (( i=0; i<${#ACCOUNT}; i++ )); do
     printf -v CH '%d' "'${ACCOUNT:i:1}"
-    ACCOUNT_SUM=$((ACCOUNT_SUM + CH))
+    ACCOUNT_HASH=$(( (ACCOUNT_HASH * 33 + CH) % 2147483647 ))
   done
-  ACCOUNT_IDX=$((ACCOUNT_SUM % ${#ACCOUNT_PALETTE[@]}))
+  ACCOUNT_IDX=$((ACCOUNT_HASH % ${#ACCOUNT_PALETTE[@]}))
   ACCOUNT_COLOR=${ACCOUNT_PALETTE[$ACCOUNT_IDX]}
   ACCOUNT_ICON=${ACCOUNT_ICONS[$ACCOUNT_IDX]}
 fi
