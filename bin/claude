@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Claude Code profile dispatcher.
+#
+# Symlink this script as claude-NAME to run Claude Code against ~/.claude-NAME.
+# The bare `claude` name uses ~/.claude-default, itself a symlink pointing at
+# whichever profile is the default.
+#
+# Never call `claude` by name in here: ~/bin comes before ~/.local/bin in PATH,
+# so the name resolves back to this script and recurses forever.
+set -euo pipefail
+
+# Native installer location; set CLAUDE_REAL for npm or brew installs.
+REAL="${CLAUDE_REAL:-${HOME}/.local/bin/claude}"
+
+name="$(basename "$0")"
+if [ "$name" = "claude" ]; then
+  dir="${CLAUDE_CONFIG_DIR:-${HOME}/.claude-default}"
+else
+  dir="${HOME}/.claude-${name#claude-}"
+fi
+
+if [ ! -d "$dir" ]; then
+  printf '%s: no profile dir %s\n' "$name" "$dir" >&2
+  exit 1
+fi
+
+# Resolved, not as written: Claude Code names the Keychain item after
+# sha256 of this string, so ~/.claude-default and its target must not end up
+# as two separate credential stores.
+CLAUDE_CONFIG_DIR="$(cd "$dir" && pwd -P)"
+export CLAUDE_CONFIG_DIR
+
+# Per-profile default model. Not settings.json: that file is shared between
+# profiles, so /model in one would overwrite the other. ANTHROPIC_MODEL also
+# stops /model from persisting there at all - the pick stays session-local.
+if [ -z "${ANTHROPIC_MODEL:-}" ] && [ -f "$CLAUDE_CONFIG_DIR/model" ]; then
+  ANTHROPIC_MODEL="$(head -n 1 "$CLAUDE_CONFIG_DIR/model")"
+  export ANTHROPIC_MODEL
+fi
+
+exec "$REAL" "$@"
