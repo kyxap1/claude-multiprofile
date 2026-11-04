@@ -17,7 +17,7 @@ Line 2:  <effort> ❯ $<cost> ❯ <duration> <context-bar> <context-%>  t:<input
 | Model | `model.display_name` | `Opus` |
 | Branch | `git branch --show-current` | `feat/statusline` |
 | Directory | `workspace.current_dir` (basename) | `claude-sandbox` |
-| 5h / 7d rate limits | `rate_limits.five_hour`, `.seven_day`: time to reset, then `used_percentage` | `2h:23% 3d:41%` |
+| 5h / 7d rate limits | `rate_limits.five_hour`, `.seven_day`: time to reset in its two largest units (truncated, `<1m` for the last minute), then `used_percentage` | `2h05m:23% 3d07h:41%` |
 | Email | `claude auth status --json`, cached per profile and session | `you@example.com` |
 | Account | `CLAUDE_CONFIG_DIR` basename, hashed to a color + icon | ` private` |
 | Effort | `effort.level` | `high` |
@@ -33,7 +33,7 @@ Line 2:  <effort> ❯ $<cost> ❯ <duration> <context-bar> <context-%>  t:<input
 
 ## Installation
 
-See [README.md](README.md): `claude-profiles.sh install` copies the script and adds the `statusLine` block.
+See [README.md](README.md): `claude-profiles.sh install` copies the script and adds the `statusLine` block with `refreshInterval: 60`.
 
 ## Customization
 
@@ -136,7 +136,7 @@ ACCOUNT_IDX=$((ACCOUNT_SUM % ${#ACCOUNT_PALETTE[@]}))
 
 - The statusline runs locally and **does not consume API tokens**.
 - Updates after each assistant message, after `/compact`, and on permission mode changes (debounced at 300ms).
-- Add `"refreshInterval": 5` to the settings block to also refresh on a timer (useful while subagents run).
+- `"refreshInterval": 60` in the settings block re-runs the script every 60 seconds. Without it the script only runs on events, so the reset countdown freezes while the session is idle.
 - `COLUMNS` and `LINES` env vars are available inside the script for terminal-width-aware layouts.
 - Use `/statusline` command with a natural-language description to generate or regenerate interactively.
 

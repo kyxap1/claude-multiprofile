@@ -78,8 +78,24 @@ step "install"
 [ -x "$HOME/.claude/statusline.sh" ] || fail "statusline not installed"
 # shellcheck disable=SC2088
 want_eq "$(jq -r .statusLine.command "$HOME/.claude/settings.json")" '~/.claude/statusline.sh' "statusLine"
+want_eq "$(jq -r .statusLine.refreshInterval "$HOME/.claude/settings.json")" "60" "refreshInterval"
 want_eq "$(jq -r .theme "$HOME/.claude/settings.json")" "dark" "existing settings kept"
 want_has "$("$P" install)" "already has a statusLine" "install is idempotent"
+s="$HOME/.claude/settings.json"
+jq 'del(.statusLine.refreshInterval)' "$s" > "$s.new" && mv "$s.new" "$s"
+"$P" install >/dev/null
+want_eq "$(jq -r .statusLine.refreshInterval "$s")" "60" "refreshInterval added to an older install"
+jq '.statusLine.command = "my-own.sh" | del(.statusLine.refreshInterval)' "$s" > "$s.new" && mv "$s.new" "$s"
+"$P" install >/dev/null
+want_eq "$(jq -c .statusLine "$s")" '{"type":"command","command":"my-own.sh"}' "someone else's statusLine untouched"
+jq '.statusLine = {type: "command", command: "~/.claude/statusline.sh", refreshInterval: 60}' "$s" > "$s.new" && mv "$s.new" "$s"
+
+step "reset countdown"
+eval "$(sed -n '/^fmt_countdown() {/,/^}/p' "$REPO/statusline.sh")"
+for c in -5:'<1m' 59:'<1m' 60:1m 3599:59m 3600:1h00m 7199:1h59m 17999:4h59m \
+         86399:23h59m 86400:1d00h 172799:1d23h 604799:6d23h; do
+  want_eq "$(fmt_countdown "${c%%:*}")" "${c#*:}" "countdown ${c%%:*}s"
+done
 
 step "migrate --dry-run changes nothing"
 before="$(find "$HOME" | sort)"

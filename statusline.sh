@@ -70,19 +70,16 @@ fmt_tokens() {
 IN_FMT=$(fmt_tokens "$INPUT_T")
 OUT_FMT=$(fmt_tokens "$OUTPUT_T")
 
-# countdown to a reset: whole hours/days once >=1, else whole minutes
+# Countdown to a reset in its two largest units (1d07h, 4h05m, 12m), truncated,
+# so it never overstates the wait; the last minute shows as <1m.
 fmt_countdown() {
-  local remain=$1 big=$2
+  local remain=$1
   [ "$remain" -lt 0 ] && remain=0
-  if [ "$big" = d ]; then
-    local d=$((remain / 86400)) h=$(( (remain % 86400) / 3600 ))
-    if [ "$d" -ge 1 ]; then echo "${d}d"; return; fi
-    if [ "$h" -ge 1 ]; then echo "${h}h"; return; fi
-    echo "$(( remain / 60 ))m"
-  else
-    local h=$((remain / 3600))
-    if [ "$h" -ge 1 ]; then echo "${h}h"; return; fi
-    echo "$(( remain / 60 ))m"
+  local d=$((remain / 86400)) h=$(( (remain % 86400) / 3600 )) m=$(( (remain % 3600) / 60 ))
+  if [ "$d" -ge 1 ]; then printf '%dd%02dh' "$d" "$h"
+  elif [ "$h" -ge 1 ]; then printf '%dh%02dm' "$h" "$m"
+  elif [ "$m" -ge 1 ]; then printf '%dm' "$m"
+  else printf '<1m'
   fi
 }
 
@@ -155,9 +152,9 @@ printf "$(fg 245)$(bg $CUR_BG) ${ICON_FOLDER}  ${DIR_SHORT} ${R}"
 
 NOW=$(date +%s)
 CD_5H=""
-[ -n "$RESETS_5H" ] && CD_5H="$(fmt_countdown $((RESETS_5H - NOW)) h)"
+[ -n "$RESETS_5H" ] && CD_5H="$(fmt_countdown $((RESETS_5H - NOW)))"
 CD_7D=""
-[ -n "$RESETS_7D" ] && CD_7D="$(fmt_countdown $((RESETS_7D - NOW)) d)"
+[ -n "$RESETS_7D" ] && CD_7D="$(fmt_countdown $((RESETS_7D - NOW)))"
 
 # 5h / 7d share one box; countdown-to-reset stands in for the label, no "5h"/"7d" prefix
 RATE_PARTS=()

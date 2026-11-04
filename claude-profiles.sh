@@ -139,19 +139,29 @@ install() {
   place "$SRC_DIR/bin/claude" "$WRAPPER"
   place "$SRC_DIR/statusline.sh" "$SHARED_DIR/statusline.sh"
 
-  local settings="$SHARED_DIR/settings.json"
-  if [ -f "$settings" ] && jq -e 'has("statusLine")' "$settings" >/dev/null; then
+  # refreshInterval keeps the reset countdown ticking while the session is idle;
+  # without it the statusline only re-runs on events.
+  # shellcheck disable=SC2088
+  local settings="$SHARED_DIR/settings.json" ours='~/.claude/statusline.sh' filter="" what=""
+  # $cmd below is a jq variable, not a shell one.
+  # shellcheck disable=SC2016
+  if [ ! -f "$settings" ] || ! jq -e 'has("statusLine")' "$settings" >/dev/null; then
+    filter='. + {statusLine: {type: "command", command: $cmd, refreshInterval: 60}}'
+    what="add statusLine -> $ours, refreshInterval 60"
+  elif jq -e --arg cmd "$ours" '.statusLine.command == $cmd and (.statusLine | has("refreshInterval") | not)' "$settings" >/dev/null; then
+    filter='.statusLine.refreshInterval = 60'
+    what="add refreshInterval 60 to the existing statusLine"
+  fi
+  if [ -z "$filter" ]; then
     echo "keep  $settings already has a statusLine block - left as is"
   elif [ "$DRY_RUN" = 1 ]; then
-    echo "would  add statusLine -> ~/.claude/statusline.sh to $settings"
+    echo "would  $what in $settings"
   else
     local current='{}'
     [ -f "$settings" ] && current="$(cat "$settings")"
-    printf '%s' "$current" \
-      | jq '. + {statusLine: {type: "command", command: "~/.claude/statusline.sh"}}' \
-      > "$settings.tmp-$STAMP"
+    printf '%s' "$current" | jq --arg cmd "$ours" "$filter" > "$settings.tmp-$STAMP"
     mv "$settings.tmp-$STAMP" "$settings"
-    echo "added statusLine to $settings"
+    echo "$what in $settings"
   fi
   echo
   path_report
