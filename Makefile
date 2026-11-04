@@ -1,9 +1,9 @@
 # 3.2 matches macOS /bin/bash.
 BASH_VERSIONS := 3.2 5
 SHELLCHECK := koalaman/shellcheck:v0.11.0
-SCRIPTS := claude-profiles.sh bin/claude statusline.sh test/test.sh
+SCRIPTS := claude-profiles.sh bin/claude statusline.sh test/test.sh docs/screenshot/run.sh docs/screenshot/render.sh
 
-.PHONY: check test lint
+.PHONY: check test lint screenshot
 
 check: lint test
 
@@ -15,3 +15,6 @@ test:
 
 lint:
 	docker run --rm -v "$(CURDIR):/mnt:ro" -w /mnt $(SHELLCHECK) $(SCRIPTS)
+
+screenshot:
+	docs/screenshot/run.sh

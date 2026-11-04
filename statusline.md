@@ -2,7 +2,7 @@
 
 A powerline-style two-line status bar for [Claude Code](https://claude.ai/code) that shows model, git branch, directory, effort level, cost, session duration, context usage, token counts, and rate limits — all at a glance.
 
-<img width="499" height="135" alt="image" src="https://gist.github.com/user-attachments/assets/f2417a2d-89ff-46df-b69b-91bc63d05b71" />
+![Two profiles side by side: work and private](docs/statusline.png)
 
 
 ## Structure

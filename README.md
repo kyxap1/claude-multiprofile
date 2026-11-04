@@ -2,6 +2,8 @@
 
 Several Claude Code accounts (say, work and personal) on one machine, sharing one config: the same `CLAUDE.md`, settings, skills, commands, hooks and plugins. Each account keeps its own login, history, sessions and `.claude.json`. A two-line statusline shows which account a terminal is on.
 
+![Two profiles side by side: work and private](docs/statusline.png)
+
 ```
 claude            default profile
 claude-work       work account
@@ -58,6 +60,8 @@ To add a profile later, run `./claude-profiles.sh add NAME [MODEL]` and then `/l
 Model, branch, directory, rate limits with time to reset, account email and profile, effort, cost, duration, context bar and token counts. See [statusline.md](statusline.md).
 
 ## Development
+
+`make screenshot` regenerates `docs/statusline.png` in Docker from the real `statusline.sh`, using made-up profiles, repos and emails. Run it after changing the statusline; CI doesn't.
 
 `make check` runs shellcheck and the end-to-end test, both in Docker. The test runs against a throwaway `HOME` under bash 3.2 (macOS `/bin/bash`) and bash 5. `make lint` and `make test` run the parts separately.
 
