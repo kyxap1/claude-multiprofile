@@ -1,0 +1,42 @@
+name: test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      macos:
+        description: Also run on macOS (billed at ~10x Linux minutes in a private repo)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make lint
+
+  docker:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        bash: ["3.2", "5"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: make test BASH_VERSIONS=${{ matrix.bash }}
+
+  # Real /bin/bash 3.2, BSD cp -c and the other macOS userland the Docker image lacks.
+  macos:
+    if: github.event_name == 'workflow_dispatch' && inputs.macos
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: command -v jq || brew install jq
+      # Scripts use `env bash`; make that the system 3.2, not Homebrew's bash.
+      - run: mkdir -p "$RUNNER_TEMP/shim" && ln -s /bin/bash "$RUNNER_TEMP/shim/bash" && echo "$RUNNER_TEMP/shim" >> "$GITHUB_PATH"
+      - run: bash test/test.sh
